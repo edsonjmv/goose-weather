@@ -15,6 +15,10 @@ import { Observable } from 'rxjs';
 import { MatAutocompleteSelectedEvent } from '@angular/material';
 import * as USCities from '../../assets/us_cities.json';
 import { City } from '../models/city/city';
+import { Store, select } from '@ngrx/store';
+import { AppState, selectError } from '../reducers';
+import { LoadWeather } from '../actions/weather.actions';
+import { LoadLocations } from '../actions/location.actions';
 
 @Component({
   selector: 'app-weather',
@@ -36,6 +40,7 @@ export class WeatherComponent implements OnInit {
   filteredCities: Observable<City[]>;
   cities = [];
   selectedLocation = '';
+  error$;
 
   cards = this.breakpointObserver.observe(Breakpoints.Handset).pipe(
     map(({ matches }) => {
@@ -47,7 +52,11 @@ export class WeatherComponent implements OnInit {
     })
   );
 
-  constructor(private breakpointObserver: BreakpointObserver, public weatherService: WeatherService) {
+  constructor(
+    private store: Store<AppState>,
+    private breakpointObserver: BreakpointObserver,
+    public weatherService: WeatherService
+  ) {
     // desktop view
     this.cardsDesktop = [
       {
@@ -142,10 +151,10 @@ export class WeatherComponent implements OnInit {
     });
 
     this.filteredCities = this.citiesCtrl.valueChanges
-    .pipe(
-      startWith(''),
-      map(city => city ? this._filterCities(city) : this.cities.slice())
-    );
+      .pipe(
+        startWith(''),
+        map(city => city ? this._filterCities(city) : this.cities.slice())
+      );
   }
 
   private _filterCities(value: string): City[] {
@@ -155,6 +164,8 @@ export class WeatherComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.error$ = this.store.pipe(select(selectError));
+
     try {
       navigator.geolocation.getCurrentPosition((position) => {
         this.savePosition(position);
@@ -174,12 +185,39 @@ export class WeatherComponent implements OnInit {
       }
     }
 
-    this.weatherService.getWeather(this.locationData)
-      .pipe(take(1))
-      .subscribe(weather => this.weatherData = weather);
+    this.store.dispatch(new LoadLocations({locationData: this.locationData}));
   }
 
   onSelectionChanged(event: MatAutocompleteSelectedEvent) {
+    for (const city of this.cities) {
+      if (city.combinedName === event.option.value) {
+        const latitude = parseFloat(city.latitude);
+        const longitude = parseFloat(city.longitude);
+        this.locationData.latitude = latitude.toFixed(4);
+        this.locationData.longitude = longitude.toFixed(4);
+        this.store.dispatch(new LoadWeather({weatherData: null}));
+        this.store.dispatch(new LoadLocations({locationData: this.locationData}));
+        break;
+      }
+    }
+  }
+
+  /* savePosition(position) {
+    this.locationData.latitude = position.coords.latitude.toFixed(4).toString();
+    this.locationData.longitude = position.coords.longitude.toFixed(4).toString();
+    for (const city of this.cities) {
+      if (city.combinedName === '(your location)') {
+        city.latitude = this.locationData.latitude;
+        city.longitude = this.locationData.longitude;
+      }
+    }
+
+    this.weatherService.getWeather(this.locationData)
+      .pipe(take(1))
+      .subscribe(weather => this.weatherData = weather);
+  } */
+
+  /* onSelectionChanged(event: MatAutocompleteSelectedEvent) {
     for (const city of this.cities) {
       if (city.combinedName === event.option.value) {
         this.locationData.latitude = city.latitude;
@@ -192,5 +230,5 @@ export class WeatherComponent implements OnInit {
         break;
       }
     }
-  }
+  } */
 }

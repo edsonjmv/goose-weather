@@ -30,7 +30,7 @@ export interface AppState {
 
 export function weatherReducer(state: WeatherState = initialWeatherState, action: WeatherActions): WeatherState {
   switch (action.type) {
-    case WeatherActionTypes.LoadWeathers:
+    case WeatherActionTypes.LoadWeather:
       return {
         weatherData: action.payload.weatherData
       };
