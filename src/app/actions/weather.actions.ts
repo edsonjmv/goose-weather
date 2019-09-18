@@ -6,6 +6,7 @@ export enum WeatherActionTypes {
 
 export class LoadWeathers implements Action {
   readonly type = WeatherActionTypes.LoadWeathers;
+  payload: any;
 }
 
 
